@@ -1,7 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import * as fs from "fs/promises";
 import * as path from "path";
-import * as os from "os";
 import { buildGrandlineSection, writeWorkspaceClaude } from "./claude-md.js";
 import { type Project } from "../config/index.js";
 
@@ -58,24 +56,24 @@ describe("writeWorkspaceClaude", () => {
   let tmpDir: string;
 
   beforeEach(async () => {
-    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "grandline-claude-md-test-"));
+    tmpDir = (await Bun.$`mktemp -d`.text()).trim();
   });
   afterEach(async () => {
-    await fs.rm(tmpDir, { recursive: true, force: true });
+    await Bun.$`rm -rf ${tmpDir}`;
   });
 
   it("writes full content when file does not exist", async () => {
     const result = await writeWorkspaceClaude(tmpDir, testProject);
     expect(result.ok).toBe(true);
 
-    const content = await fs.readFile(path.join(tmpDir, "CLAUDE.md"), "utf-8");
+    const content = await Bun.file(path.join(tmpDir, "CLAUDE.md")).text();
     expect(content).toContain("# my-project");
     expect(content).toContain("| frontend |");
     expect(content).not.toContain("<!-- logpose:start -->");
   });
 
   it("overwrites entirely when no fence in existing file", async () => {
-    await fs.writeFile(
+    await Bun.write(
       path.join(tmpDir, "CLAUDE.md"),
       "# old content\n\nsome old text\n"
     );
@@ -83,7 +81,7 @@ describe("writeWorkspaceClaude", () => {
     const result = await writeWorkspaceClaude(tmpDir, testProject);
     expect(result.ok).toBe(true);
 
-    const content = await fs.readFile(path.join(tmpDir, "CLAUDE.md"), "utf-8");
+    const content = await Bun.file(path.join(tmpDir, "CLAUDE.md")).text();
     expect(content).toContain("# my-project");
     expect(content).not.toContain("# old content");
     expect(content).not.toContain("some old text");
@@ -99,12 +97,12 @@ describe("writeWorkspaceClaude", () => {
 <!-- logpose:end -->
 `;
     const existing = "# old-project\n\nOld content.\n\n" + logposeBlock;
-    await fs.writeFile(path.join(tmpDir, "CLAUDE.md"), existing);
+    await Bun.write(path.join(tmpDir, "CLAUDE.md"), existing);
 
     const result = await writeWorkspaceClaude(tmpDir, testProject);
     expect(result.ok).toBe(true);
 
-    const content = await fs.readFile(path.join(tmpDir, "CLAUDE.md"), "utf-8");
+    const content = await Bun.file(path.join(tmpDir, "CLAUDE.md")).text();
     // Grandline section updated
     expect(content).toContain("# my-project");
     expect(content).not.toContain("# old-project");
@@ -122,12 +120,12 @@ feature
 <!-- logpose:end -->
 `;
     const existing = "# original-name\n\nOld.\n\n" + logposeBlock;
-    await fs.writeFile(path.join(tmpDir, "CLAUDE.md"), existing);
+    await Bun.write(path.join(tmpDir, "CLAUDE.md"), existing);
 
     const renamedProject: Project = { ...testProject, name: "renamed-project" };
     await writeWorkspaceClaude(tmpDir, renamedProject);
 
-    const content = await fs.readFile(path.join(tmpDir, "CLAUDE.md"), "utf-8");
+    const content = await Bun.file(path.join(tmpDir, "CLAUDE.md")).text();
     expect(content).toContain("# renamed-project");
     expect(content).not.toContain("# original-name");
     expect(content).toContain("feature");

@@ -1,7 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import * as fs from "fs/promises";
 import * as path from "path";
-import * as os from "os";
 import { composeWorkspace } from "./workspace.js";
 import { type Project } from "../config/index.js";
 
@@ -13,18 +11,18 @@ function patchHome(dir: string): void {
 }
 
 beforeEach(async () => {
-  tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "grandline-ws-test-"));
+  tmpDir = (await Bun.$`mktemp -d`.text()).trim();
   patchHome(tmpDir);
 });
 afterEach(async () => {
-  await fs.rm(tmpDir, { recursive: true, force: true });
+  await Bun.$`rm -rf ${tmpDir}`;
 });
 
 describe("composeWorkspace — local repos", () => {
   it("creates symlink for local repo", async () => {
     // Create a fake local repo
     const localRepo = path.join(tmpDir, "local-repo");
-    await fs.mkdir(localRepo);
+    await Bun.$`mkdir -p ${localRepo}`;
 
     const workspacePath = path.join(tmpDir, "workspace");
     const project: Project = {
@@ -38,16 +36,16 @@ describe("composeWorkspace — local repos", () => {
     expect(result.ok).toBe(true);
 
     const linkPath = path.join(workspacePath, "my-repo");
-    const stat = await fs.lstat(linkPath);
-    expect(stat.isSymbolicLink()).toBe(true);
+    const isSymlink = (await Bun.$`test -L ${linkPath}`.nothrow()).exitCode === 0;
+    expect(isSymlink).toBe(true);
 
-    const target = await fs.readlink(linkPath);
+    const target = (await Bun.$`readlink ${linkPath}`.text()).trim();
     expect(target).toBe(localRepo);
   });
 
   it("skips symlink if already correct", async () => {
     const localRepo = path.join(tmpDir, "local-repo");
-    await fs.mkdir(localRepo);
+    await Bun.$`mkdir -p ${localRepo}`;
 
     const workspacePath = path.join(tmpDir, "workspace");
     const project: Project = {
@@ -66,15 +64,15 @@ describe("composeWorkspace — local repos", () => {
   it("replaces symlink pointing to wrong target", async () => {
     const localRepo1 = path.join(tmpDir, "local-repo-1");
     const localRepo2 = path.join(tmpDir, "local-repo-2");
-    await fs.mkdir(localRepo1);
-    await fs.mkdir(localRepo2);
+    await Bun.$`mkdir -p ${localRepo1}`;
+    await Bun.$`mkdir -p ${localRepo2}`;
 
     const workspacePath = path.join(tmpDir, "workspace");
-    await fs.mkdir(workspacePath);
+    await Bun.$`mkdir -p ${workspacePath}`;
     const linkPath = path.join(workspacePath, "my-repo");
 
     // Create existing symlink pointing to repo1
-    await fs.symlink(localRepo1, linkPath);
+    await Bun.$`ln -s ${localRepo1} ${linkPath}`;
 
     const project: Project = {
       name: "test",
@@ -86,7 +84,7 @@ describe("composeWorkspace — local repos", () => {
     const result = await composeWorkspace(project);
     expect(result.ok).toBe(true);
 
-    const target = await fs.readlink(linkPath);
+    const target = (await Bun.$`readlink ${linkPath}`.text()).trim();
     expect(target).toBe(localRepo2);
   });
 });
@@ -95,10 +93,10 @@ describe("composeWorkspace — subpath repos", () => {
   it("symlinks to subpath of cloned repo", async () => {
     // Create a fake "cloned" repo with a subpath (simulate by pre-creating)
     const reposBase = path.join(tmpDir, ".grandline", "repos");
-    await fs.mkdir(reposBase, { recursive: true });
+    await Bun.$`mkdir -p ${reposBase}`;
     const clonedRepo = path.join(reposBase, "my-pkg");
     const subpathDir = path.join(clonedRepo, "packages", "core");
-    await fs.mkdir(subpathDir, { recursive: true });
+    await Bun.$`mkdir -p ${subpathDir}`;
 
     // Mark it as already "cloned" so we don't actually git clone
     // We'll use a local source trick: point to a local path that exists
@@ -117,7 +115,7 @@ describe("composeWorkspace — subpath repos", () => {
     expect(result.ok).toBe(true);
 
     const linkPath = path.join(workspacePath, "core");
-    const target = await fs.readlink(linkPath);
+    const target = (await Bun.$`readlink ${linkPath}`.text()).trim();
     expect(target).toBe(subpathDir);
   });
 });
@@ -136,7 +134,7 @@ describe("composeWorkspace — workspace dir", () => {
     const result = await composeWorkspace(project);
     expect(result.ok).toBe(true);
 
-    const stat = await fs.stat(workspacePath);
-    expect(stat.isDirectory()).toBe(true);
+    const isDirExists = (await Bun.$`test -d ${workspacePath}`.nothrow()).exitCode === 0;
+    expect(isDirExists).toBe(true);
   });
 });

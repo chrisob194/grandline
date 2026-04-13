@@ -1,4 +1,3 @@
-import * as fs from "fs/promises";
 import * as path from "path";
 import { type Project, type RepoEntry } from "../config/index.js";
 import { type Result } from "../config/config.js";
@@ -45,7 +44,7 @@ export async function writeWorkspaceClaude(
 
   let existing = "";
   try {
-    existing = await fs.readFile(filePath, "utf-8");
+    existing = await Bun.file(filePath).text();
   } catch {
     // File does not exist — write from scratch
   }
@@ -55,10 +54,10 @@ export async function writeWorkspaceClaude(
 
   try {
     if (fenceIdx === -1) {
-      await fs.writeFile(filePath, grandlineContent);
+      await Bun.write(filePath, grandlineContent);
     } else {
       const logposeBlock = existing.slice(fenceIdx);
-      await fs.writeFile(filePath, grandlineContent + "\n" + logposeBlock);
+      await Bun.write(filePath, grandlineContent + "\n" + logposeBlock);
     }
     return { ok: true, value: undefined };
   } catch (err: unknown) {

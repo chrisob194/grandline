@@ -1,4 +1,3 @@
-import * as fs from "fs/promises";
 import * as os from "os";
 import * as path from "path";
 import { type Project, type RepoEntry } from "../config/index.js";
@@ -15,24 +14,19 @@ export type WorkspaceResult<T> =
   | { ok: false; error: WorkspaceError };
 
 async function cloneIfAbsent(url: string, dest: string): Promise<WorkspaceResult<void>> {
+  const exists = (await Bun.$`test -d ${dest}`.nothrow()).exitCode === 0;
+  if (exists) return { ok: true, value: undefined };
+
   try {
-    await fs.access(dest);
-    return { ok: true, value: undefined }; // already cloned
-  } catch {
-    // Needs clone
-  }
-
-  const proc = Bun.spawn(["git", "clone", url, dest], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  await proc.exited;
-
-  if (proc.exitCode !== 0) {
-    const stderr = await new Response(proc.stderr).text();
+    await Bun.$`git clone ${url} ${dest}`;
+    return { ok: true, value: undefined };
+  } catch (err) {
+    const stderr =
+      err instanceof Error && "stderr" in err
+        ? (err as { stderr: { toString(): string } }).stderr.toString()
+        : String(err);
     return { ok: false, error: { kind: "clone-failed", url, stderr } };
   }
-  return { ok: true, value: undefined };
 }
 
 async function symlinkEntry(
@@ -40,14 +34,15 @@ async function symlinkEntry(
   dest: string
 ): Promise<WorkspaceResult<void>> {
   try {
-    const existing = await fs.lstat(dest).catch(() => null);
-    if (existing) {
-      if (existing.isSymbolicLink()) {
-        const current = await fs.readlink(dest);
+    const existsAny = (await Bun.$`test -e ${dest}`.nothrow()).exitCode === 0;
+    if (existsAny) {
+      const isLink = (await Bun.$`test -L ${dest}`.nothrow()).exitCode === 0;
+      if (isLink) {
+        const current = (await Bun.$`readlink ${dest}`.text()).trim();
         if (current === target) {
           return { ok: true, value: undefined }; // already correct
         }
-        await fs.unlink(dest); // wrong target — replace
+        await Bun.$`rm ${dest}`; // wrong target — replace
       } else {
         // Not a symlink — leave it alone, report error
         return {
@@ -61,7 +56,7 @@ async function symlinkEntry(
         };
       }
     }
-    await fs.symlink(target, dest);
+    await Bun.$`ln -s ${target} ${dest}`;
     return { ok: true, value: undefined };
   } catch (err: unknown) {
     return {
@@ -101,7 +96,7 @@ export async function composeWorkspace(project: Project): Promise<WorkspaceResul
 
   // Ensure workspace directory exists
   try {
-    await fs.mkdir(workspacePath, { recursive: true });
+    await Bun.$`mkdir -p ${workspacePath}`;
   } catch (err: unknown) {
     return { ok: false, error: { kind: "workspace-dir-error", message: String(err) } };
   }

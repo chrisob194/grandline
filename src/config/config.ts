@@ -1,4 +1,4 @@
-import * as fs from "fs/promises";
+import { readdir } from "fs/promises";
 import * as path from "path";
 import { type ZodIssue } from "zod";
 import { ConfigSchema, ProjectSchema, type Config, type Project } from "./schemas.js";
@@ -41,26 +41,25 @@ export function reposDir(): string {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 async function readJson(filePath: string): Promise<Result<unknown>> {
+  const file = Bun.file(filePath);
+  if (!(await file.exists())) {
+    return { ok: false, error: { kind: "config-not-found", path: filePath } };
+  }
   try {
-    const raw = await fs.readFile(filePath, "utf-8");
+    const raw = await file.text();
     try {
       return { ok: true, value: JSON.parse(raw) };
     } catch {
       return { ok: false, error: { kind: "io-error", message: `Invalid JSON in ${filePath}` } };
     }
   } catch (err: unknown) {
-    const code = (err as NodeJS.ErrnoException).code;
-    if (code === "ENOENT") {
-      return { ok: false, error: { kind: "config-not-found", path: filePath } };
-    }
     return { ok: false, error: { kind: "io-error", message: String(err) } };
   }
 }
 
 async function writeJson(filePath: string, data: unknown): Promise<Result<void>> {
   try {
-    await fs.mkdir(path.dirname(filePath), { recursive: true });
-    await fs.writeFile(filePath, JSON.stringify(data, null, 2));
+    await Bun.write(filePath, JSON.stringify(data, null, 2));
     return { ok: true, value: undefined };
   } catch (err: unknown) {
     return { ok: false, error: { kind: "io-error", message: String(err) } };
@@ -71,14 +70,12 @@ async function writeJson(filePath: string, data: unknown): Promise<Result<void>>
 
 export async function ensureGrandlineDir(): Promise<Result<void>> {
   try {
-    await fs.mkdir(path.join(grandlineDir(), "projects"), { recursive: true });
-    await fs.mkdir(reposDir(), { recursive: true });
+    await Bun.$`mkdir -p ${path.join(grandlineDir(), "projects")}`;
+    await Bun.$`mkdir -p ${reposDir()}`;
     // Create empty config if absent
-    try {
-      await fs.access(configPath());
-    } catch {
+    if (!(await Bun.file(configPath()).exists())) {
       const empty: Config = { agents: [] };
-      await fs.writeFile(configPath(), JSON.stringify(empty, null, 2));
+      await Bun.write(configPath(), JSON.stringify(empty, null, 2));
     }
     return { ok: true, value: undefined };
   } catch (err: unknown) {
@@ -128,7 +125,7 @@ export async function writeProject(project: Project): Promise<Result<void>> {
 export async function listProjects(): Promise<Result<string[]>> {
   const dir = path.join(grandlineDir(), "projects");
   try {
-    const entries = await fs.readdir(dir, { withFileTypes: true });
+    const entries = await readdir(dir, { withFileTypes: true });
     const names = entries
       .filter((e) => e.isDirectory())
       .map((e) => e.name)
@@ -145,7 +142,7 @@ export async function listProjects(): Promise<Result<string[]>> {
 
 export async function deleteProject(name: string): Promise<Result<void>> {
   try {
-    await fs.rm(projectDir(name), { recursive: true, force: true });
+    await Bun.$`rm -rf ${projectDir(name)}`;
     return { ok: true, value: undefined };
   } catch (err: unknown) {
     return { ok: false, error: { kind: "io-error", message: String(err) } };

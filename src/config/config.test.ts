@@ -1,7 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import * as fs from "fs/promises";
 import * as path from "path";
-import * as os from "os";
 
 // Override HOME so config reads/writes go to a temp dir
 let tmpDir: string;
@@ -20,11 +18,11 @@ async function importConfig() {
 
 describe("ensureGrandlineDir", () => {
   beforeEach(async () => {
-    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "grandline-test-"));
+    tmpDir = (await Bun.$`mktemp -d`.text()).trim();
     setHome(tmpDir);
   });
   afterEach(async () => {
-    await fs.rm(tmpDir, { recursive: true, force: true });
+    await Bun.$`rm -rf ${tmpDir}`;
   });
 
   it("creates .grandline dirs and empty config.json", async () => {
@@ -32,13 +30,13 @@ describe("ensureGrandlineDir", () => {
     const result = await ensureGrandlineDir();
     expect(result.ok).toBe(true);
 
-    const configExists = await fs.access(path.join(tmpDir, ".grandline", "config.json")).then(() => true).catch(() => false);
+    const configExists = await Bun.file(path.join(tmpDir, ".grandline", "config.json")).exists();
     expect(configExists).toBe(true);
 
-    const projectsDirExists = await fs.stat(path.join(tmpDir, ".grandline", "projects")).then(s => s.isDirectory()).catch(() => false);
+    const projectsDirExists = (await Bun.$`test -d ${path.join(tmpDir, ".grandline", "projects")}`.nothrow()).exitCode === 0;
     expect(projectsDirExists).toBe(true);
 
-    const reposDirExists = await fs.stat(path.join(tmpDir, ".grandline", "repos")).then(s => s.isDirectory()).catch(() => false);
+    const reposDirExists = (await Bun.$`test -d ${path.join(tmpDir, ".grandline", "repos")}`.nothrow()).exitCode === 0;
     expect(reposDirExists).toBe(true);
   });
 
@@ -63,11 +61,11 @@ describe("ensureGrandlineDir", () => {
 
 describe("readConfig / writeConfig", () => {
   beforeEach(async () => {
-    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "grandline-test-"));
+    tmpDir = (await Bun.$`mktemp -d`.text()).trim();
     setHome(tmpDir);
   });
   afterEach(async () => {
-    await fs.rm(tmpDir, { recursive: true, force: true });
+    await Bun.$`rm -rf ${tmpDir}`;
   });
 
   it("returns empty config when file does not exist", async () => {
@@ -102,7 +100,7 @@ describe("readConfig / writeConfig", () => {
     await ensureGrandlineDir();
 
     // Write invalid structure (missing agents array)
-    await fs.writeFile(
+    await Bun.write(
       path.join(tmpDir, ".grandline", "config.json"),
       JSON.stringify({ agents: "not-an-array" })
     );
@@ -117,11 +115,11 @@ describe("readConfig / writeConfig", () => {
 
 describe("readProject / writeProject", () => {
   beforeEach(async () => {
-    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "grandline-test-"));
+    tmpDir = (await Bun.$`mktemp -d`.text()).trim();
     setHome(tmpDir);
   });
   afterEach(async () => {
-    await fs.rm(tmpDir, { recursive: true, force: true });
+    await Bun.$`rm -rf ${tmpDir}`;
   });
 
   it("round-trips project", async () => {
@@ -158,11 +156,11 @@ describe("readProject / writeProject", () => {
 
 describe("listProjects", () => {
   beforeEach(async () => {
-    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "grandline-test-"));
+    tmpDir = (await Bun.$`mktemp -d`.text()).trim();
     setHome(tmpDir);
   });
   afterEach(async () => {
-    await fs.rm(tmpDir, { recursive: true, force: true });
+    await Bun.$`rm -rf ${tmpDir}`;
   });
 
   it("returns empty array when no projects", async () => {
@@ -196,11 +194,11 @@ describe("listProjects", () => {
 
 describe("deleteProject", () => {
   beforeEach(async () => {
-    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "grandline-test-"));
+    tmpDir = (await Bun.$`mktemp -d`.text()).trim();
     setHome(tmpDir);
   });
   afterEach(async () => {
-    await fs.rm(tmpDir, { recursive: true, force: true });
+    await Bun.$`rm -rf ${tmpDir}`;
   });
 
   it("removes project directory", async () => {
