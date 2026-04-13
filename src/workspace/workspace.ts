@@ -1,4 +1,5 @@
 import * as fs from "fs/promises";
+import * as os from "os";
 import * as path from "path";
 import { type Project, type RepoEntry } from "../config/index.js";
 import { type Result, reposDir } from "../config/config.js";
@@ -94,9 +95,13 @@ async function resolveTarget(entry: RepoEntry): Promise<WorkspaceResult<string>>
 }
 
 export async function composeWorkspace(project: Project): Promise<WorkspaceResult<void>> {
+  const workspacePath = project.workspacePath.startsWith("~/")
+    ? path.join(os.homedir(), project.workspacePath.slice(2))
+    : project.workspacePath;
+
   // Ensure workspace directory exists
   try {
-    await fs.mkdir(project.workspacePath, { recursive: true });
+    await fs.mkdir(workspacePath, { recursive: true });
   } catch (err: unknown) {
     return { ok: false, error: { kind: "workspace-dir-error", message: String(err) } };
   }
@@ -105,7 +110,7 @@ export async function composeWorkspace(project: Project): Promise<WorkspaceResul
     const targetResult = await resolveTarget(entry);
     if (!targetResult.ok) return targetResult;
 
-    const dest = path.join(project.workspacePath, entry.name);
+    const dest = path.join(workspacePath, entry.name);
     const symlinkResult = await symlinkEntry(targetResult.value, dest);
     if (!symlinkResult.ok) return symlinkResult;
   }

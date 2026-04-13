@@ -7,7 +7,6 @@ type Phase =
   | { step: "loading" }
   | { step: "list"; agents: Agent[] }
   | { step: "add-name" }
-  | { step: "add-bin"; name: string }
   | { step: "confirm-remove"; agent: Agent; agents: Agent[] }
   | { step: "saving" }
   | { step: "error"; message: string };
@@ -41,7 +40,7 @@ export function AgentsFlow({ onBack }: AgentsFlowProps): React.ReactElement {
   if (phase.step === "list") {
     const { agents } = phase;
     const options = [
-      ...agents.map((a) => ({ label: `${a.name}  (${a.bin})`, value: `agent:${a.name}` })),
+      ...agents.map((a) => ({ label: a.name, value: `agent:${a.name}` })),
       { label: "+ Add agent", value: "__add__" },
       { label: "← Back", value: "__back__" },
     ];
@@ -69,29 +68,14 @@ export function AgentsFlow({ onBack }: AgentsFlowProps): React.ReactElement {
         <TextInput
           placeholder="e.g. claude"
           onSubmit={(name) => {
-            if (name.trim()) setPhase({ step: "add-bin", name: name.trim() });
-          }}
-        />
-      </Box>
-    );
-  }
-
-  if (phase.step === "add-bin") {
-    const { name } = phase;
-    return (
-      <Box flexDirection="column">
-        <Text bold>Binary path for {name}:</Text>
-        <TextInput
-          placeholder="e.g. /usr/bin/claude"
-          onSubmit={(bin) => {
-            if (!bin.trim()) return;
+            if (!name.trim()) return;
             setPhase({ step: "saving" });
             readConfig()
               .then(async (result) => {
                 const config = result.ok ? result.value : { agents: [] };
                 const updated = {
                   ...config,
-                  agents: [...config.agents, { name, bin: bin.trim() }],
+                  agents: [...config.agents, { name: name.trim(), bin: name.trim() }],
                 };
                 const writeResult = await writeConfig(updated);
                 if (!writeResult.ok) {

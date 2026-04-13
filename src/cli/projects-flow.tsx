@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import * as os from "os";
 import { Box, Text } from "ink";
 import { Select, TextInput, Spinner } from "@inkjs/ui";
 import {
@@ -32,6 +33,16 @@ type Phase =
   | { step: "confirm-delete"; project: Project }
   | { step: "saving" }
   | { step: "error"; message: string };
+
+function Breadcrumb({ entries }: { entries: [string, string][] }): React.ReactElement {
+  return (
+    <Box flexDirection="column" marginBottom={1}>
+      {entries.map(([k, v]) => (
+        <Text key={k} dimColor>{k}: <Text bold>{v}</Text></Text>
+      ))}
+    </Box>
+  );
+}
 
 interface ProjectsFlowProps {
   onBack: () => void;
@@ -138,8 +149,9 @@ export function ProjectsFlow({ onBack }: ProjectsFlowProps): React.ReactElement 
     const { name } = phase;
     return (
       <Box flexDirection="column">
+        <Breadcrumb entries={[["Project", name]]} />
         <Text bold>Workspace path (absolute):</Text>
-        <TextInput placeholder={`/home/user/workspaces/${name}`} onSubmit={(v) => { if (v.trim()) setPhase({ step: "create-type", name, workspacePath: v.trim() }); }} />
+        <TextInput placeholder={`${os.homedir()}/workspaces/project`} onSubmit={(v) => { if (v.trim()) setPhase({ step: "create-type", name, workspacePath: v.trim() }); }} />
       </Box>
     );
   }
@@ -149,6 +161,7 @@ export function ProjectsFlow({ onBack }: ProjectsFlowProps): React.ReactElement 
     const { name, workspacePath } = phase;
     return (
       <Box flexDirection="column">
+        <Breadcrumb entries={[["Project", name], ["Workspace", workspacePath]]} />
         <Text bold>Project type:</Text>
         <Select
           options={[
@@ -172,6 +185,12 @@ export function ProjectsFlow({ onBack }: ProjectsFlowProps): React.ReactElement 
     const rest = phase;
     return (
       <Box flexDirection="column">
+        <Breadcrumb entries={[["Project", rest.name], ["Workspace", rest.workspacePath], ["Type", rest.type]]} />
+        {rest.repos.length > 0 && (
+          <Box flexDirection="column" marginBottom={1}>
+            {rest.repos.map((r) => <Text key={r.name} dimColor>  + {r.name}</Text>)}
+          </Box>
+        )}
         <Text bold>Repo name (symlink name in workspace):</Text>
         <TextInput placeholder="e.g. frontend" onSubmit={(v) => {
           if (v.trim()) setPhase({ ...rest, step: "create-repo-kind", repoName: v.trim() });
@@ -185,6 +204,7 @@ export function ProjectsFlow({ onBack }: ProjectsFlowProps): React.ReactElement 
     const rest = phase;
     return (
       <Box flexDirection="column">
+        <Breadcrumb entries={[["Project", rest.name], ["Workspace", rest.workspacePath], ["Type", rest.type], ["Repo", rest.repoName]]} />
         <Text bold>Source kind for {phase.repoName}:</Text>
         <Select
           options={[
@@ -206,6 +226,7 @@ export function ProjectsFlow({ onBack }: ProjectsFlowProps): React.ReactElement 
     const rest = phase;
     return (
       <Box flexDirection="column">
+        <Breadcrumb entries={[["Project", rest.name], ["Workspace", rest.workspacePath], ["Type", rest.type], ["Repo", rest.repoName], ["Source", rest.kind]]} />
         <Text bold>Git URL:</Text>
         <TextInput placeholder="https://github.com/org/repo" onSubmit={(v) => {
           if (!v.trim()) return;
@@ -225,6 +246,7 @@ export function ProjectsFlow({ onBack }: ProjectsFlowProps): React.ReactElement 
     const rest = phase;
     return (
       <Box flexDirection="column">
+        <Breadcrumb entries={[["Project", rest.name], ["Workspace", rest.workspacePath], ["Type", rest.type], ["Repo", rest.repoName], ["URL", rest.url]]} />
         <Text bold>Subpath within repo:</Text>
         <TextInput placeholder="packages/my-pkg" onSubmit={(v) => {
           if (!v.trim()) return;
@@ -240,6 +262,7 @@ export function ProjectsFlow({ onBack }: ProjectsFlowProps): React.ReactElement 
     const rest = phase;
     return (
       <Box flexDirection="column">
+        <Breadcrumb entries={[["Project", rest.name], ["Workspace", rest.workspacePath], ["Type", rest.type], ["Repo", rest.repoName], ["Source", "local"]]} />
         <Text bold>Local path to repo:</Text>
         <TextInput placeholder="/home/user/my-repo" onSubmit={(v) => {
           if (!v.trim()) return;
@@ -280,6 +303,7 @@ export function ProjectsFlow({ onBack }: ProjectsFlowProps): React.ReactElement 
     const { project } = phase;
     return (
       <Box flexDirection="column">
+        <Breadcrumb entries={[["Project", project.name]]} />
         <Text bold>New repo name:</Text>
         <TextInput placeholder="e.g. backend" onSubmit={(v) => {
           if (v.trim()) setPhase({ step: "add-repo-kind", project, repoName: v.trim() });
@@ -292,6 +316,7 @@ export function ProjectsFlow({ onBack }: ProjectsFlowProps): React.ReactElement 
     const { project, repoName } = phase;
     return (
       <Box flexDirection="column">
+        <Breadcrumb entries={[["Project", project.name], ["Repo", repoName]]} />
         <Text bold>Source kind for {repoName}:</Text>
         <Select
           options={[
@@ -312,6 +337,7 @@ export function ProjectsFlow({ onBack }: ProjectsFlowProps): React.ReactElement 
     const { project, repoName, kind } = phase;
     return (
       <Box flexDirection="column">
+        <Breadcrumb entries={[["Project", project.name], ["Repo", repoName], ["Source", kind]]} />
         <Text bold>Git URL:</Text>
         <TextInput placeholder="https://github.com/org/repo" onSubmit={(v) => {
           if (!v.trim()) return;
@@ -332,6 +358,7 @@ export function ProjectsFlow({ onBack }: ProjectsFlowProps): React.ReactElement 
     const { project, repoName, url } = phase;
     return (
       <Box flexDirection="column">
+        <Breadcrumb entries={[["Project", project.name], ["Repo", repoName], ["URL", url]]} />
         <Text bold>Subpath:</Text>
         <TextInput placeholder="packages/my-pkg" onSubmit={(v) => {
           if (!v.trim()) return;
@@ -348,6 +375,7 @@ export function ProjectsFlow({ onBack }: ProjectsFlowProps): React.ReactElement 
     const { project, repoName } = phase;
     return (
       <Box flexDirection="column">
+        <Breadcrumb entries={[["Project", project.name], ["Repo", repoName], ["Source", "local"]]} />
         <Text bold>Local path:</Text>
         <TextInput placeholder="/home/user/my-repo" onSubmit={(v) => {
           if (!v.trim()) return;

@@ -95,7 +95,6 @@ export function LaunchFlow({ onBack }: LaunchFlowProps): React.ReactElement {
         setPhase({ step: "error", message: `CLAUDE.md generation failed: ${genResult.error.kind}` });
         return;
       }
-      // Launch: exit Ink then exec agent
       exit();
       execAgent(agentBin, workspacePath);
     }
@@ -123,8 +122,6 @@ export function LaunchFlow({ onBack }: LaunchFlowProps): React.ReactElement {
               onBack();
               return;
             }
-            setPhase({ step: "loading" });
-            // Reload to fetch agents for selected project
             readConfig().then((configResult) => {
               if (!configResult.ok) {
                 setPhase({ step: "error", message: "Failed to read config" });
@@ -151,7 +148,7 @@ export function LaunchFlow({ onBack }: LaunchFlowProps): React.ReactElement {
         <Text bold>Select agent:</Text>
         <Select
           options={[
-            ...agents.map((a) => ({ label: `${a.name}  (${a.bin})`, value: a.bin })),
+            ...agents.map((a) => ({ label: a.name, value: a.bin })),
             { label: "← Back", value: "__back__" },
           ]}
           onChange={(agentBin) => {
