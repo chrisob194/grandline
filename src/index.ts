@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 import { parseArgs } from "util";
 import { listProjects, readConfig, ensureGrandlineDir } from "./config/index.js";
 

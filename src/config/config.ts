@@ -119,6 +119,11 @@ export async function readProject(name: string): Promise<Result<Project>> {
 }
 
 export async function writeProject(project: Project): Promise<Result<void>> {
+  try {
+    await Bun.$`mkdir -p ${projectDir(project.name)}`;
+  } catch (err: unknown) {
+    return { ok: false, error: { kind: "io-error", message: String(err) } };
+  }
   return writeJson(projectPath(project.name), project);
 }
 

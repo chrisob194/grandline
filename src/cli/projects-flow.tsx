@@ -69,7 +69,7 @@ export function ProjectsFlow({ onBack }: ProjectsFlowProps): React.ReactElement 
     setPhase({ step: "saving" });
     const result = await writeProject(project);
     if (!result.ok) {
-      setPhase({ step: "error", message: `Failed to save project: ${result.error.kind}` });
+      setPhase({ step: "error", message: `Failed to save project: ${result.error.kind}: ${"message" in result.error ? result.error.message : ""}` });
       return;
     }
     setPhase({ step: "loading" });
