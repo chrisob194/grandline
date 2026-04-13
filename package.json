@@ -1,13 +1,14 @@
 {
   "name": "grandline",
   "version": "0.1.0",
+  "type": "module",
   "description": "CLI for managing and launching coding agents across multi-repo projects",
   "bin": {
     "grandline": "./dist/index.js"
   },
   "scripts": {
     "dev": "bun run src/index.ts",
-    "build": "tsc",
+    "build": "tsc && chmod +x dist/index.js",
     "test": "bun test"
   },
   "dependencies": {

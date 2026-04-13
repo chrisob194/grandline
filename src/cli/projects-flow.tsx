@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import * as os from "os";
 import { Box, Text } from "ink";
 import { Select, TextInput, Spinner } from "@inkjs/ui";
+import { PathInput } from "./components/PathInput.js";
 import {
   listProjects,
   readProject,
@@ -151,7 +152,7 @@ export function ProjectsFlow({ onBack }: ProjectsFlowProps): React.ReactElement 
       <Box flexDirection="column">
         <Breadcrumb entries={[["Project", name]]} />
         <Text bold>Workspace path (absolute):</Text>
-        <TextInput placeholder={`${os.homedir()}/workspaces/project`} onSubmit={(v) => { if (v.trim()) setPhase({ step: "create-type", name, workspacePath: v.trim() }); }} />
+        <PathInput placeholder={`${os.homedir()}/workspaces/project`} onSubmit={(v) => { if (v.trim()) setPhase({ step: "create-type", name, workspacePath: v.trim() }); }} />
       </Box>
     );
   }
@@ -264,7 +265,7 @@ export function ProjectsFlow({ onBack }: ProjectsFlowProps): React.ReactElement 
       <Box flexDirection="column">
         <Breadcrumb entries={[["Project", rest.name], ["Workspace", rest.workspacePath], ["Type", rest.type], ["Repo", rest.repoName], ["Source", "local"]]} />
         <Text bold>Local path to repo:</Text>
-        <TextInput placeholder="/home/user/my-repo" onSubmit={(v) => {
+        <PathInput placeholder="/home/user/my-repo" onSubmit={(v) => {
           if (!v.trim()) return;
           const entry: RepoEntry = { name: rest.repoName, source: { kind: "local", path: v.trim() } };
           setPhase({ ...rest, step: "create-repo-another", repos: [...rest.repos, entry] });
@@ -377,7 +378,7 @@ export function ProjectsFlow({ onBack }: ProjectsFlowProps): React.ReactElement 
       <Box flexDirection="column">
         <Breadcrumb entries={[["Project", project.name], ["Repo", repoName], ["Source", "local"]]} />
         <Text bold>Local path:</Text>
-        <TextInput placeholder="/home/user/my-repo" onSubmit={(v) => {
+        <PathInput placeholder="/home/user/my-repo" onSubmit={(v) => {
           if (!v.trim()) return;
           const entry: RepoEntry = { name: repoName, source: { kind: "local", path: v.trim() } };
           saveProject({ ...project, repos: [...project.repos, entry] }).catch((err: unknown) =>

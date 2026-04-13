@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { parseArgs } from "util";
 import { listProjects, readConfig, ensureGrandlineDir } from "./config/index.js";
 
